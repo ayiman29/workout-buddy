@@ -12,37 +12,30 @@ const ALLOWED_STAKES = [
   'Romantic Favor 😉',
 ];
 
-function safeSegment(source, start, length) {
-  const value = (source || '').replace(/[^a-zA-Z0-9]/g, '');
-  const segment = value.slice(start, start + length);
+const PAIRING_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
-  if (segment.length === length) {
-    return segment;
+function createRandomPairingCode() {
+  let code = '';
+
+  for (let index = 0; index < 5; index += 1) {
+    const randomIndex = Math.floor(Math.random() * PAIRING_CODE_ALPHABET.length);
+    code += PAIRING_CODE_ALPHABET[randomIndex];
   }
 
-  const fallback = `${value}${'X'.repeat(length)}`;
-  return `${segment}${fallback.slice(0, length - segment.length)}`;
+  return code;
 }
 
-function safeTailSegment(source, length) {
-  const value = (source || '').replace(/[^a-zA-Z0-9]/g, '');
-  const segment = value.slice(-length);
+async function generateUniquePairingCode() {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const code = createRandomPairingCode();
+    const existingUser = await Users.exists({ pairingCode: code });
 
-  if (segment.length === length) {
-    return segment;
+    if (!existingUser) {
+      return code;
+    }
   }
 
-  return `${'X'.repeat(length - segment.length)}${segment}`;
-}
-
-function generatePairingCode(user) {
-  const namePart = safeSegment(user.name, 0, 5);
-  const userId = String(user._id);
-  const userIdFirst = safeSegment(userId, 0, 5);
-  const emailPart = safeSegment(user.email, 0, 7);
-  const nameTail = safeTailSegment(user.name, 3);
-
-  return `${namePart}${userIdFirst}${emailPart}${nameTail}`.toUpperCase();
+  throw new Error('Unable to generate unique pairing code');
 }
 
 function buildMemberScores(memberIds) {
@@ -77,11 +70,7 @@ export async function fetchPairingCode(req, res) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (user.pairingCode) {
-      return res.status(200).json({ pairingCode: user.pairingCode });
-    }
-
-    user.pairingCode = generatePairingCode(user);
+    user.pairingCode = await generateUniquePairingCode();
     await user.save();
 
     return res.status(200).json({ pairingCode: user.pairingCode });
@@ -121,6 +110,11 @@ export async function buddyUp(req, res) {
     if (String(user._id) === String(buddyUser._id)) {
       return res.status(400).json({ message: 'Cannot buddy up with yourself' });
     }
+
+    await Users.updateOne(
+      { _id: buddyUser._id },
+      { $unset: { pairingCode: 1 } }
+    );
 
     const existingPair = await BuddyPair.findOne({
       members: { $all: [user._id, buddyUser._id], $size: 2 },
