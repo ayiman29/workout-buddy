@@ -13,25 +13,25 @@ Express + MongoDB backend for buddy pairing, workouts, bets, and challenge proof
 
 ```
 backend/
-	src/
-		app.js
-		server.js
-		config/
-			db.js
-			gridfs.js
-		controllers/
-			userController.js
-		middleware/
-			proofUpload.js
-		models/
-			Users.js
-			Workout.js
-			BuddyPair.js
-			BuddyWorkout.js
-			Challenge.js        // weekly bets collection (bets)
-			BuddyChallenge.js   // buddy challenges collection (challenges)
-		routes/
-			userRoutes.js
+└── src/
+    ├── app.js
+    ├── server.js
+    ├── config/
+    │   ├── db.js
+    │   └── gridfs.js
+    ├── controllers/
+    │   └── userController.js
+    ├── middleware/
+    │   └── proofUpload.js
+    ├── models/
+    │   ├── User.js
+    │   ├── Workout.js
+    │   ├── BuddyPair.js
+    │   ├── BuddyWorkout.js
+    │   ├── Bet.js
+    │   └── Challenge.js
+    └── routes/
+        └── userRoutes.js
 ```
 
 ## Setup
@@ -63,7 +63,7 @@ The API is mounted at `/user`.
 For local development:
 
 ```
-http://localhost:5000/user
+http://localhost:5000/
 ```
 
 ## API Documentation
