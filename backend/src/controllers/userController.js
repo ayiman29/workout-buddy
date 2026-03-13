@@ -3,6 +3,7 @@ import BuddyPair from '../models/BuddyPair.js';
 import BuddyWorkout from '../models/BuddyWorkout.js';
 import Challenge from '../models/Challenge.js';
 import BuddyChallenge from '../models/BuddyChallenge.js';
+import CalorieTracker from '../models/CalorieTracker.js';
 import {
   deleteProofFromGridFS,
   getProofDownloadStream,
@@ -16,6 +17,18 @@ const ALLOWED_STAKES = [
   '1 Chore',
   'Romantic Favor 😉',
 ];
+
+const ALLOWED_WORKOUTS = {
+  pushup:  { met: 3.8 },
+  pullup:  { met: 4.0 },
+  running: { met: 7.0 },
+  squats:  { met: 5.0 },
+  bicycling: { met: 8.0 },
+  walking: { met: 4.3 },
+  swimming: { met: 10.0 },
+  hiking: { met: 7.3},
+  ropejumping: { met: 10.0 },
+};
 
 const PAIRING_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
@@ -759,5 +772,107 @@ export async function getCurrentStakes(req, res) {
   } catch (error) {
     console.error('getCurrentStakes error:', error);
     return res.status(500).json({ message: 'Failed to fetch current stakes' });
+  }
+}
+export async function CalorieLogger(req, res) {
+  try {
+    const { id } = req.params;
+    const { weight, goal, date, workout, duration } = req.body;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+
+    if (!weight || weight < 10) {
+      return res.status(400).json({ message: 'invalid weight' });
+    }
+
+    if (!goal || goal < 1) {
+      return res.status(400).json({ message: 'goal must be a positive number' });
+    }
+
+    if (typeof workout !== 'string' || !workout.trim()) {
+      return res.status(400).json({ message: 'Workout must be a non-empty string' });
+    }
+
+    if (!duration || duration<=0) {
+      return res.status(400).json({ message: 'duration must be a positive number' });
+    }
+    
+    const normalizedWorkout = workout.trim().toLowerCase();
+
+    const isAllowedWorkout = normalizedWorkout in ALLOWED_WORKOUTS;
+
+    if (!isAllowedWorkout) {
+      return res.status(400).json({ message: 'workout not allowed' });
+    }
+  
+    const calories = calorieCalc(normalizedWorkout, duration, weight);
+    const goalmet = calories >= goal;
+
+    const entry = await CalorieTracker.create({
+      userId: id,
+      weight,
+      goal,
+      calories,
+      workout: normalizedWorkout,
+      duration,
+      goalmet,
+      date: date ? new Date(date) : new Date(),
+    });
+
+    return res.status(201).json(entry);
+
+  } catch (error) {
+    console.error('logCalories error:', error);
+    return res.status(500).json({ message: 'Failed to log calories' });
+  }
+}
+function calorieCalc(workout, duration, weight)
+{
+  const { met } = ALLOWED_WORKOUTS[workout];
+  return Math.round(met*weight*(duration/60));
+}
+export async function GetCalorieHistory(req, res)
+{
+  try
+  {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+
+    const user = await Users.findById(id).select('_id');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const filter = { userId: id };
+    if (req.query.start || req.query.end) {
+      filter.date = {};
+      if (req.query.start)
+        {
+          filter.date.$gte = new Date(req.query.start);
+        }
+      if (req.query.end)
+        {
+          filter.date.$lte = new Date(req.query.end);
+        }
+    }
+
+    const entries = await CalorieTracker.find(filter).sort({ date: -1 });
+
+    const totalCalories = entries.reduce((sum, e) => sum + e.calories, 0);
+    return res.status(200).json({
+      userId: id,
+      totalCalories,
+      entries,
+    });
+  }
+  catch (error)
+  {
+    console.error('CalorieTracker error:', error);
+    return res.status(500).json({ message: 'Failed to fetch Calorie history' });
   }
 }
