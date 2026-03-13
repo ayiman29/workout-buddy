@@ -13,6 +13,8 @@ import {
   getChallengeProof,
   submitChallengeProof,
   resolveBuddyChallenge,
+  CalorieLogger,
+  GetCalorieHistory,
 } from '../controllers/userController.js';
 import proofUpload from '../middleware/proofUpload.js';
 
@@ -36,6 +38,8 @@ router.post('/:id/challenges', createBuddyChallenge);
 router.get('/:id/challenges/:challengeId/proof', getChallengeProof);
 router.post('/:id/challenges/:challengeId/proof', proofUpload.single('proof'), submitChallengeProof);
 router.put('/:id/challenges/:challengeId/resolve', resolveBuddyChallenge);
+router.post('/:id/calories', CalorieLogger);
+router.get('/:id/calories', GetCalorieHistory);
 /*
 bet has to connection to the points yet
 */
