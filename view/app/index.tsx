@@ -15,6 +15,10 @@ export default function Home() {
 
   useEffect(() => {
     if (!userId) return;
+    if (user?.role === "admin") {
+      router.replace(`/admin-dashboard`);
+      return;
+    }
     fetch(`${API_BASE_URL}/user/${userId}/buddy`)
       .then((res) => res.json())
       .then((data) => {

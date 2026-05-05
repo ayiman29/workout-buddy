@@ -12,8 +12,6 @@ function RootLayout() {
     const inAuthRoute = segments[0] === "login" || segments[0] === "signup";
     if (!isAuthenticated && !inAuthRoute) {
       router.replace("/login");
-    } else if (isAuthenticated && inAuthRoute) {
-      router.replace("/");
     }
   }, [isAuthenticated, isLoading, segments, router]);
 

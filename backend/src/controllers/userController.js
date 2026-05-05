@@ -4875,7 +4875,7 @@ async function notifyModerationOutcome({ report, adminUser, targetUser, reporter
   }
 
   if (notifications.length > 0) {
-    await NotificationEvent.create(notifications, { session });
+    await NotificationEvent.insertMany(notifications, { session, ordered: true });
   }
 }
 

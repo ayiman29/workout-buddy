@@ -20,6 +20,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -27,12 +28,19 @@ export default function Login() {
       return;
     }
     setLoading(true);
-    const { error } = await login(email.trim(), password);
+    setLoginError("");
+    const { user, error } = await login(email.trim(), password);
     setLoading(false);
     if (error) {
+      setLoginError(error);
       Alert.alert("Login failed", error);
+      return;
     }
-    // Navigation is handled by the auth guard in _layout.tsx
+    if (user?.role === "admin") {
+      router.replace("/admin-dashboard");
+    } else {
+      router.replace("/");
+    }
   };
 
   return (
@@ -78,6 +86,8 @@ export default function Login() {
               <Text style={styles.buttonText}>Log In</Text>
             )}
           </TouchableOpacity>
+
+          {!!loginError && <Text style={styles.errorText}>{loginError}</Text>}
 
           <View style={styles.dividerRow}>
             <View style={styles.line} />
@@ -177,5 +187,10 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#39d2b4",
     fontSize: 16,
+  },
+  errorText: {
+    color: "#ff4d4f",
+    marginTop: 12,
+    textAlign: "center",
   },
 });

@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "Bash(node -e \"require\\('socket.io-client'\\); console.log\\('ok'\\)\")"
+      "Bash(node -e \"require\\('socket.io-client'\\); console.log\\('ok'\\)\")",
+      "Bash(curl -s -X POST http://localhost:5001/user/auth/signup -H 'Content-Type: application/json' -d '{\"name\":\"Test Admin\",\"email\":\"testadmin99@test.com\",\"password\":\"test123\",\"role\":\"admin\",\"adminKey\":\"admin\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X PATCH http://localhost:5001/user/admin/69fa11f7277c6b2a3cb21bc1/reports/000000000000000000000001 -H 'Content-Type: application/json' -d '{\"action\":\"resolve\"}')",
+      "Bash(curl -s \"http://localhost:5001/user/admin/69fa11f7277c6b2a3cb21bc1/reports\")",
+      "Bash(curl -s -X PATCH http://localhost:5001/user/admin/69fa11f7277c6b2a3cb21bc1/reports/69fa0e033aa7f34f77073744 -H 'Content-Type: application/json' -d '{\"action\":\"resolve\",\"note\":\"test\"}')",
+      "Bash(curl -s -X PATCH http://localhost:5001/user/admin/69fa11f7277c6b2a3cb21bc1/reports/69fa0e033aa7f34f77073744 -H 'Content-Type: application/json' -d '{\"action\":\"dismiss\"}')"
     ]
   }
 }

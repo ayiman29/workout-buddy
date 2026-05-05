@@ -81,6 +81,7 @@ export default function CalorieTracker() {
     notes: string;
   }>(null);
   const [loadingNutrition, setLoadingNutrition] = useState(false);
+  const [nutritionError, setNutritionError] = useState("");
 
   // AI Image Scan
   const [showScanModal, setShowScanModal] = useState(false);
@@ -233,14 +234,15 @@ export default function CalorieTracker() {
     const height_cm = parseFloat(nutritionHeight);
 
     if (!nutritionGoal || !nutritionActivity) {
-      Alert.alert("Error", "Please select a goal and activity level.");
+      setNutritionError("Please select a goal and activity level.");
       return;
     }
     if (!age || !weight_kg || !height_cm) {
-      Alert.alert("Error", "Please fill in all fields.");
+      setNutritionError("Please fill in age, weight, and height.");
       return;
     }
 
+    setNutritionError("");
     setLoadingNutrition(true);
     setNutritionResult(null);
     try {
@@ -253,10 +255,10 @@ export default function CalorieTracker() {
       if (res.ok) {
         setNutritionResult(data);
       } else {
-        Alert.alert("Error", data.message || "Failed to generate guide.");
+        setNutritionError(data.message || "Failed to generate guide.");
       }
     } catch {
-      Alert.alert("Error", "Something went wrong.");
+      setNutritionError("Could not reach server. Is the backend running?");
     } finally {
       setLoadingNutrition(false);
     }
@@ -368,7 +370,7 @@ export default function CalorieTracker() {
       </View>
 
       <View style={styles.aiRow}>
-        <TouchableOpacity style={styles.aiBtn} onPress={() => { setNutritionResult(null); setShowNutritionModal(true); }}>
+        <TouchableOpacity style={styles.aiBtn} onPress={() => { setNutritionResult(null); setNutritionError(""); setShowNutritionModal(true); }}>
           <Text style={styles.aiBtnText}>AI Nutrition Guide</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.aiBtn} onPress={handlePickAndScanImage}>
@@ -426,85 +428,100 @@ export default function CalorieTracker() {
       {/* AI Nutrition Guide Modal */}
       <Modal visible={showNutritionModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>AI Nutrition Guide</Text>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>AI Nutrition Guide</Text>
 
-              <Text style={styles.label}>Age</Text>
-              <TextInput style={styles.input} placeholder="e.g. 25" placeholderTextColor="#666"
-                keyboardType="numeric" value={nutritionAge} onChangeText={setNutritionAge} />
+            {!nutritionResult ? (
+              <>
+                <Text style={styles.label}>Age</Text>
+                <TextInput style={styles.input} placeholder="e.g. 25" placeholderTextColor="#666"
+                  keyboardType="numeric" value={nutritionAge} onChangeText={setNutritionAge} />
 
-              <Text style={styles.label}>Weight (kg)</Text>
-              <TextInput style={styles.input} placeholder="e.g. 70" placeholderTextColor="#666"
-                keyboardType="numeric" value={nutritionWeight} onChangeText={setNutritionWeight} />
+                <Text style={styles.label}>Weight (kg)</Text>
+                <TextInput style={styles.input} placeholder="e.g. 70" placeholderTextColor="#666"
+                  keyboardType="numeric" value={nutritionWeight} onChangeText={setNutritionWeight} />
 
-              <Text style={styles.label}>Height (cm)</Text>
-              <TextInput style={styles.input} placeholder="e.g. 175" placeholderTextColor="#666"
-                keyboardType="numeric" value={nutritionHeight} onChangeText={setNutritionHeight} />
+                <Text style={styles.label}>Height (cm)</Text>
+                <TextInput style={styles.input} placeholder="e.g. 175" placeholderTextColor="#666"
+                  keyboardType="numeric" value={nutritionHeight} onChangeText={setNutritionHeight} />
 
-              <Text style={styles.label}>Goal</Text>
-              <View style={styles.chipRow}>
-                {(["weight_loss", "muscle_gain", "maintenance", "endurance"] as const).map((g) => (
-                  <TouchableOpacity key={g} style={[styles.chip, nutritionGoal === g && styles.chipActive]}
-                    onPress={() => setNutritionGoal(g)}>
-                    <Text style={[styles.chipText, nutritionGoal === g && styles.chipTextActive]}>
-                      {g.replace("_", " ")}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.label}>Activity Level</Text>
-              <View style={styles.chipRow}>
-                {(["sedentary", "light", "moderate", "active", "very_active"] as const).map((a) => (
-                  <TouchableOpacity key={a} style={[styles.chip, nutritionActivity === a && styles.chipActive]}
-                    onPress={() => setNutritionActivity(a)}>
-                    <Text style={[styles.chipText, nutritionActivity === a && styles.chipTextActive]}>
-                      {a.replace("_", " ")}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {nutritionResult && (
-                <View style={styles.guideCard}>
-                  <Text style={styles.guideCalories}>{nutritionResult.daily_calories}</Text>
-                  <Text style={styles.guideCalLabel}>kcal / day</Text>
-                  <View style={styles.guideMacroRow}>
-                    <View style={styles.guideMacro}>
-                      <Text style={styles.guideMacroVal}>{nutritionResult.macros.protein_g}g</Text>
-                      <Text style={styles.guideMacroLabel}>Protein</Text>
-                    </View>
-                    <View style={styles.guideMacro}>
-                      <Text style={styles.guideMacroVal}>{nutritionResult.macros.carbs_g}g</Text>
-                      <Text style={styles.guideMacroLabel}>Carbs</Text>
-                    </View>
-                    <View style={styles.guideMacro}>
-                      <Text style={styles.guideMacroVal}>{nutritionResult.macros.fat_g}g</Text>
-                      <Text style={styles.guideMacroLabel}>Fat</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.guideMeta}>{nutritionResult.meal_count} meals/day · {nutritionResult.hydration_liters}L water</Text>
-                  {nutritionResult.recommended_meal_types?.length > 0 && (
-                    <Text style={styles.guideMeta}>
-                      {nutritionResult.recommended_meal_types.join(", ")}
-                    </Text>
-                  )}
-                  {nutritionResult.notes ? <Text style={styles.guideNotes}>{nutritionResult.notes}</Text> : null}
+                <Text style={styles.label}>Goal</Text>
+                <View style={styles.chipRow}>
+                  {(["weight_loss", "muscle_gain", "maintenance", "endurance"] as const).map((g) => (
+                    <TouchableOpacity key={g} style={[styles.chip, nutritionGoal === g && styles.chipActive]}
+                      onPress={() => setNutritionGoal(g)}>
+                      <Text style={[styles.chipText, nutritionGoal === g && styles.chipTextActive]}>
+                        {g.replace("_", " ")}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              )}
 
-              <View style={[styles.modalActions, { marginTop: 16 }]}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowNutritionModal(false); setNutritionResult(null); }}>
-                  <Text style={styles.cancelBtnText}>Close</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.saveBtn, loadingNutrition && { opacity: 0.6 }]}
-                  onPress={handleNutritionGuide} disabled={loadingNutrition}>
+                <Text style={styles.label}>Activity Level</Text>
+                <View style={styles.chipRow}>
+                  {(["sedentary", "light", "moderate", "active", "very_active"] as const).map((a) => (
+                    <TouchableOpacity key={a} style={[styles.chip, nutritionActivity === a && styles.chipActive]}
+                      onPress={() => setNutritionActivity(a)}>
+                      <Text style={[styles.chipText, nutritionActivity === a && styles.chipTextActive]}>
+                        {a.replace("_", " ")}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <View style={styles.guideCard}>
+                <Text style={styles.guideCalories}>{nutritionResult.daily_calories}</Text>
+                <Text style={styles.guideCalLabel}>kcal / day</Text>
+                <View style={styles.guideMacroRow}>
+                  <View style={styles.guideMacro}>
+                    <Text style={styles.guideMacroVal}>{nutritionResult.macros.protein_g}g</Text>
+                    <Text style={styles.guideMacroLabel}>Protein</Text>
+                  </View>
+                  <View style={styles.guideMacro}>
+                    <Text style={styles.guideMacroVal}>{nutritionResult.macros.carbs_g}g</Text>
+                    <Text style={styles.guideMacroLabel}>Carbs</Text>
+                  </View>
+                  <View style={styles.guideMacro}>
+                    <Text style={styles.guideMacroVal}>{nutritionResult.macros.fat_g}g</Text>
+                    <Text style={styles.guideMacroLabel}>Fat</Text>
+                  </View>
+                </View>
+                <Text style={styles.guideMeta}>{nutritionResult.meal_count} meals/day · {nutritionResult.hydration_liters}L water</Text>
+                {nutritionResult.recommended_meal_types?.length > 0 && (
+                  <Text style={styles.guideMeta}>{nutritionResult.recommended_meal_types.join(", ")}</Text>
+                )}
+                {nutritionResult.notes ? <Text style={styles.guideNotes}>{nutritionResult.notes}</Text> : null}
+              </View>
+            )}
+
+            {loadingNutrition && (
+              <ActivityIndicator color="#39d2b4" style={{ marginTop: 16 }} />
+            )}
+
+            {!!nutritionError && (
+              <Text style={{ color: "#ff6b6b", fontSize: 13, marginTop: 12 }}>{nutritionError}</Text>
+            )}
+
+            <View style={[styles.modalActions, { marginTop: 16 }]}>
+              <TouchableOpacity style={styles.cancelBtn}
+                onPress={() => { setShowNutritionModal(false); setNutritionResult(null); }}>
+                <Text style={styles.cancelBtnText}>Close</Text>
+              </TouchableOpacity>
+              {!nutritionResult ? (
+                <TouchableOpacity
+                  style={[styles.saveBtn, loadingNutrition && { opacity: 0.6 }]}
+                  onPress={handleNutritionGuide}
+                  disabled={loadingNutrition}>
                   <Text style={styles.saveBtnText}>{loadingNutrition ? "Generating..." : "Generate"}</Text>
                 </TouchableOpacity>
-              </View>
+              ) : (
+                <TouchableOpacity style={styles.saveBtn} onPress={() => setNutritionResult(null)}>
+                  <Text style={styles.saveBtnText}>Try Again</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
 

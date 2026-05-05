@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,31 +24,38 @@ export default function Signup() {
   const [role, setRole] = useState<"user" | "admin">("user");
   const [adminKey, setAdminKey] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleSignup = async () => {
+    setErrorMsg("");
     if (!name.trim() || !email.trim() || !password) {
-      Alert.alert("Missing fields", "Please fill in all fields.");
+      setErrorMsg("Please fill in all fields.");
       return;
     }
     if (password !== confirm) {
-      Alert.alert("Password mismatch", "Passwords do not match.");
+      setErrorMsg("Passwords do not match.");
       return;
     }
     if (password.length < 6) {
-      Alert.alert("Weak password", "Password must be at least 6 characters.");
+      setErrorMsg("Password must be at least 6 characters.");
       return;
     }
     if (role === "admin" && !adminKey.trim()) {
-      Alert.alert("Admin key required", "Please enter the admin key.");
+      setErrorMsg("Please enter the admin key.");
       return;
     }
     setLoading(true);
-    const { error } = await signup(name.trim(), email.trim(), password, role, adminKey.trim());
+    const { user, error } = await signup(name.trim(), email.trim(), password, role, adminKey.trim());
     setLoading(false);
     if (error) {
-      Alert.alert("Signup failed", error);
+      setErrorMsg(error);
+      return;
     }
-    // Navigation is handled by the auth guard in _layout.tsx
+    if (user?.role === "admin") {
+      router.replace("/admin-dashboard");
+    } else {
+      router.replace("/");
+    }
   };
 
   return (
@@ -136,6 +142,10 @@ export default function Signup() {
                 value={adminKey}
                 onChangeText={setAdminKey}
               />
+            )}
+
+            {!!errorMsg && (
+              <Text style={styles.errorText}>{errorMsg}</Text>
             )}
 
             <TouchableOpacity
@@ -253,6 +263,13 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#39d2b4",
     fontSize: 15,
+  },
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 12,
+    width: "100%",
   },
   roleRow: {
     width: "100%",

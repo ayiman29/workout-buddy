@@ -14,8 +14,8 @@ type AuthContextType = {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<{ error?: string }>;
-  signup: (name: string, email: string, password: string, role?: string, adminKey?: string) => Promise<{ error?: string }>;
+  login: (email: string, password: string) => Promise<{ user?: AuthUser; error?: string }>;
+  signup: (name: string, email: string, password: string, role?: string, adminKey?: string) => Promise<{ user?: AuthUser; error?: string }>;
   logout: () => Promise<void>;
 };
 
@@ -78,13 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) return { error: data.message || "Login failed" };
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const statusMessage = data?.message || res.statusText || "Login failed";
+        return { error: `${statusMessage}` };
+      }
       await writeStoredUser(JSON.stringify(data.user));
       setUser(data.user);
-      return {};
-    } catch {
-      return { error: "Could not connect to server" };
+      return { user: data.user };
+    } catch (error: any) {
+      return { error: error?.message || "Could not connect to server" };
     }
   };
 
@@ -101,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) return { error: data.message || "Signup failed" };
       await writeStoredUser(JSON.stringify(data.user));
       setUser(data.user);
-      return {};
+      return { user: data.user };
     } catch {
       return { error: "Could not connect to server" };
     }
