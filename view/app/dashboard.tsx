@@ -42,6 +42,13 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState("");
   const [uploading, setUploading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [performanceSummary, setPerformanceSummary] = useState<any | null>(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
+
+  const formatPerformanceLabel = (label: string) =>
+    label
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (str) => str.toUpperCase());
 
   const getFirstName = (name?: string) => {
     const trimmed = name?.trim();
@@ -61,6 +68,29 @@ export default function Dashboard() {
     const diffDays = Math.floor(diffHrs / 24);
     return `${diffDays}d ago`;
   };
+
+  useEffect(() => {
+    const fetchPerformance = async () => {
+      if (!userId) return;
+      setPerformanceLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/user/${userId}/performance`);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => null);
+          throw new Error(errorData?.message || "Failed to load performance");
+        }
+        const data = await res.json();
+        setPerformanceSummary(data);
+      } catch (error) {
+        console.error("Failed to fetch performance summary:", error);
+        setPerformanceSummary(null);
+      } finally {
+        setPerformanceLoading(false);
+      }
+    };
+
+    fetchPerformance();
+  }, [userId, refreshKey]);
 
   useEffect(() => {
     const fetchNames = async () => {
@@ -163,12 +193,12 @@ export default function Dashboard() {
           const remaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86400000));
           setDaysLeft(remaining);
         }
-      } catch (e) {
-        console.error("Failed to fetch weekly details:", e);
+      } catch {
+        console.error("Failed to fetch weekly details");
       }
     };
     fetchDetails();
-  }, [weeklyGoalId, buddyId, refreshKey]);
+  }, [weeklyGoalId, buddyId, refreshKey, userId]);
 
   const handleLogWorkout = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -245,7 +275,7 @@ export default function Dashboard() {
         return;
       }
       setRefreshKey((k) => k + 1);
-    } catch (e) {
+    } catch {
       Alert.alert("Upload failed", "Could not connect to server.");
     } finally {
       setUploading(false);
@@ -325,6 +355,68 @@ export default function Dashboard() {
             </TouchableOpacity>
             <Text style={styles.winTitle}>Win the week early</Text>
             <Text style={styles.winSubtitle}>Set the tone before {buddyName} does</Text>
+          </View>
+        )}
+
+        {(performanceSummary || performanceLoading) && (
+          <View style={styles.performanceCard}>
+            <View style={styles.performanceHeader}>
+              <Text style={styles.sectionTitle}>Performance Tier</Text>
+              {performanceSummary?.individual?.currentTier ? (
+                <Text style={styles.tierBadge}>{performanceSummary.individual.currentTier}</Text>
+              ) : null}
+            </View>
+
+            {performanceLoading ? (
+              <Text style={styles.performanceLoadingText}>Loading performance...</Text>
+            ) : performanceSummary ? (
+              <>
+                <Text style={styles.performancePoints}>
+                  {performanceSummary.individual.points} pts
+                </Text>
+                <Text style={styles.performanceSubtext}>
+                  {performanceSummary.individual.nextTier
+                    ? `${Math.max(0, (performanceSummary.individual.nextThreshold || 0) - performanceSummary.individual.points)} pts to ${performanceSummary.individual.nextTier}`
+                    : "Max tier reached"}
+                </Text>
+                {performanceSummary.individual.recognition?.message ? (
+                  <Text style={styles.performanceRecognition}>
+                    {performanceSummary.individual.recognition.message}
+                  </Text>
+                ) : null}
+
+                {performanceSummary.individual.breakdown ? (
+                  <View style={styles.performanceBreakdown}>
+                    {Object.entries(performanceSummary.individual.breakdown).map(([label, value]) => (
+                      <View key={label} style={styles.performanceLine}>
+                        <Text style={styles.performanceLineLabel}>{formatPerformanceLabel(label)}</Text>
+                        <Text style={styles.performanceLineValue}>{String(value)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                {performanceSummary.combined ? (
+                  <>
+                    <View style={styles.performanceDivider} />
+                    <Text style={styles.performanceSubheading}>Combined tier</Text>
+                    <View style={styles.performanceLine}>
+                      <Text style={styles.performanceLineLabel}>Tier</Text>
+                      <Text style={styles.performanceLineValue}>{performanceSummary.combined.currentTier}</Text>
+                    </View>
+                    <View style={styles.performanceLine}>
+                      <Text style={styles.performanceLineLabel}>Points</Text>
+                      <Text style={styles.performanceLineValue}>{performanceSummary.combined.points}</Text>
+                    </View>
+                    <Text style={styles.performanceSubtext}>
+                      {performanceSummary.combined.nextTier
+                        ? `${Math.max(0, (performanceSummary.combined.nextThreshold || 0) - performanceSummary.combined.points)} pts to ${performanceSummary.combined.nextTier}`
+                        : "Max tier reached"}
+                    </Text>
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </View>
         )}
 
@@ -518,6 +610,93 @@ const styles = StyleSheet.create({
     color: "#888",
     fontSize: 14,
     textAlign: "center",
+  },
+
+  performanceCard: {
+    backgroundColor: "rgba(39, 44, 50, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(57, 210, 180, 0.22)",
+    borderRadius: 25,
+    padding: 18,
+    marginBottom: 20,
+  },
+
+  performanceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  tierBadge: {
+    color: "#39d2b4",
+    fontSize: 13,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+
+  performanceLoadingText: {
+    color: "#aaa",
+    fontSize: 13,
+    marginBottom: 10,
+  },
+
+  performancePoints: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  performanceRecognition: {
+    color: "#7aedc3",
+    fontSize: 12,
+    marginBottom: 10,
+  },
+
+  performanceBreakdown: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.08)",
+    paddingTop: 12,
+  },
+
+  performanceLine: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  performanceLineLabel: {
+    color: "#aaa",
+    fontSize: 12,
+  },
+
+  performanceLineValue: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  performanceSubheading: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 10,
+    marginBottom: 8,
+  },
+
+  performanceSubtext: {
+    color: "#888",
+    fontSize: 12,
+    marginBottom: 10,
+  },
+
+  performanceDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginVertical: 12,
   },
 
   carouselCard: {
