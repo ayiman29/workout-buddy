@@ -62,6 +62,8 @@ import {
   getPerformanceSummary,
   getNotificationPreferences,
   saveNotificationPreferences,
+  createNotification,
+  deleteNotification,
   getNotificationFeed,
   markNotificationRead,
   createModerationReport,
@@ -149,8 +151,10 @@ router.get('/:id/widget-data', getWidgetData);
 router.get('/:id/performance', getPerformanceSummary);
 router.get('/:id/notification-settings', getNotificationPreferences);
 router.post('/:id/notification-settings', saveNotificationPreferences);
+router.post('/:id/notifications', createNotification);
 router.get('/:id/notifications', getNotificationFeed);
 router.patch('/:id/notifications/:notificationId/read', markNotificationRead);
+router.delete('/:id/notifications/:notificationId', deleteNotification);
 /*
 bet has to connection to the points yet
 */
