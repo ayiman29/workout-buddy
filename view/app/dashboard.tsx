@@ -295,9 +295,6 @@ export default function Dashboard() {
             <Text style={styles.menu}>≡</Text>
           </TouchableOpacity>
 
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>🔥 Both hit goal = streak!</Text>
-          </View>
         </View>
 
         {/* PHOTO CAROUSEL / WIN CARD */}

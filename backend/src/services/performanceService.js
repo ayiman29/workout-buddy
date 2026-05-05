@@ -243,8 +243,6 @@ export async function buildPerformanceSummary(userId) {
           points: combinedTier.points,
           progressToNext: combinedTier.progressToNext,
           nextTier: combinedTier.nextTier,
-          currentMin: combinedTier.currentMin,
-          nextThreshold: combinedTier.nextThreshold,
           breakdown: combined.breakdown,
           combinedStreak: buddyPair?.combinedStreak || null,
           totalWorkoutsCompleted: buddyPair?.totalWorkoutsCompleted || 0,
