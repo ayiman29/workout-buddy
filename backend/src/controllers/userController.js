@@ -5093,3 +5093,62 @@ export async function reviewModerationReport(req, res) {
     return res.status(500).json({ message: 'Failed to review moderation report' });
   }
 }
+
+export async function createNotification(req, res) {
+  try {
+    const { id } = req.params;
+    const { type = 'general', title, body, payload = {}, source = 'manual', preferenceId = null, delivered = true } = req.body;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: 'Invalid user id' });
+    }
+
+    if (!title || !body) {
+      return res.status(400).json({ message: 'Title and body are required' });
+    }
+
+    const userExists = await Users.exists({ _id: id });
+    if (!userExists) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const now = new Date();
+    const notification = await NotificationEvent.create({
+      userId: id,
+      preferenceId,
+      type,
+      title,
+      body,
+      payload,
+      source,
+      scheduledFor: now,
+      deliveredAt: delivered ? now : null,
+      status: delivered ? 'delivered' : 'queued',
+    });
+
+    return res.status(201).json({ message: 'Notification created', notification });
+  } catch (error) {
+    console.error('createNotification error:', error);
+    return res.status(500).json({ message: 'Failed to create notification' });
+  }
+}
+
+export async function deleteNotification(req, res) {
+  try {
+    const { id, notificationId } = req.params;
+
+    if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(notificationId)) {
+      return res.status(400).json({ message: 'Invalid identifier' });
+    }
+
+    const deleted = await NotificationEvent.findOneAndDelete({ _id: notificationId, userId: id });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    return res.status(200).json({ message: 'Notification deleted' });
+  } catch (error) {
+    console.error('deleteNotification error:', error);
+    return res.status(500).json({ message: 'Failed to delete notification' });
+  }
+}
