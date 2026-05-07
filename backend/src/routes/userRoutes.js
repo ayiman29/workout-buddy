@@ -74,6 +74,7 @@ import {
 import proofUpload from '../middleware/proofUpload.js';
 import imageUpload from '../middleware/imageUpload.js';
 import accountStatusGuard from '../middleware/accountStatus.js';
+import requireAuth from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -82,17 +83,20 @@ const router = express.Router();
  * router.put('/weekly challenges)
  * router.put('/evidence)
  */
-router.get('/users', getUsers);
 router.post('/auth/signup', signup);
 router.post('/auth/login', login);
+
+router.use(requireAuth);
+
+router.get('/users', getUsers);
 router.get('/admin/:adminId/reports', getModerationReports);
 router.get('/admin/:adminId/reports/:reportId', getModerationReport);
 router.patch('/admin/:adminId/reports/:reportId', reviewModerationReport);
 router.get('/weekly-goals/allowed-stakes', getAllowedStakes);
 router.get('/habits/library', getHabitLibrary);
 router.use('/:id', accountStatusGuard);
-router.get('/:id/weekly-goals/allowed-stakes', getAllowedStakes); //just added
-router.post('/:id/weekly-goals/allowed-stakes', addWeeklyGoalStake); //just added
+router.get('/:id/weekly-goals/allowed-stakes', getAllowedStakes); 
+router.post('/:id/weekly-goals/allowed-stakes', addWeeklyGoalStake); 
 router.get('/:id/pairing-code', fetchPairingCode);
 router.put('/:id/buddy/:pairingCode', buddyUp);
 router.get('/:id/buddy', getBuddyInfo);
@@ -109,14 +113,14 @@ router.post('/:id/habits', createHabit);
 router.post('/:id/habits/:habitId/log', logHabitOccurrence);
 router.put('/:id/habits/:habitId/goal', updateHabitGoal);
 router.delete('/:id/habits/:habitId', deleteHabit);
-router.post('/:id/weekly-goals', updateWeeklyGoal); //just added
+router.post('/:id/weekly-goals', updateWeeklyGoal); 
 router.get('/:id/challenges', getBuddyChallenges);
 router.post('/:id/challenges', createBuddyChallenge);
 router.post('/:id/challenges/:challengeId/proof', proofUpload.single('proof'), submitBuddyChallengeProof);
 router.get('/:id/challenges/:challengeId/proof', getBuddyChallengeProof);
-router.post('/:id/weekly-goals/:weeklyGoalId/proof', proofUpload.single('proof'), submitWeeklyGoalProof); //just added
-router.get('/:id/weekly-goals/:weeklyGoalId/proof/:proofId', getWeeklyGoalProof); //just added
-router.get('/:id/weekly-goals/:weeklyGoalId/details', getWeeklyGoalDetails); //just added
+router.post('/:id/weekly-goals/:weeklyGoalId/proof', proofUpload.single('proof'), submitWeeklyGoalProof);
+router.get('/:id/weekly-goals/:weeklyGoalId/proof/:proofId', getWeeklyGoalProof); 
+router.get('/:id/weekly-goals/:weeklyGoalId/details', getWeeklyGoalDetails);
 router.get('/foods/search', SearchFoods);
 router.post('/:id/calories/intake/log', CalorieIntakeLogger);
 router.get('/:id/calories/intake/history', GetCalorieIntakeHistory);
