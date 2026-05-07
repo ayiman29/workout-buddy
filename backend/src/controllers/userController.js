@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import Users from '../models/Users.js';
 import BuddyPair from '../models/BuddyPair.js';
 import BuddyWorkout from '../models/BuddyWorkout.js';
@@ -501,8 +502,16 @@ export async function login(req, res) {
       });
     }
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key',
+      { expiresIn: '24h' }
+    );
+
     return res.status(200).json({
       message: 'Login successful',
+      token,
       user: {
         id: user._id,
         name: user.name,
