@@ -12,6 +12,7 @@ export type AuthUser = {
 
 type AuthContextType = {
   user: AuthUser | null;
+  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ user?: AuthUser; error?: string }>;
@@ -21,6 +22,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  token: null,
   isLoading: true,
   isAuthenticated: false,
   login: async () => ({}),
@@ -29,6 +31,45 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 const STORAGE_KEY = "auth_user";
+const TOKEN_STORAGE_KEY = "auth_token";
+let currentAuthToken: string | null = null;
+let fetchPatched = false;
+
+function setCurrentAuthToken(token: string | null) {
+  currentAuthToken = token;
+}
+
+function patchFetchIfNeeded() {
+  if (fetchPatched || typeof globalThis.fetch !== "function") {
+    return;
+  }
+
+  const originalFetch = globalThis.fetch.bind(globalThis);
+
+  globalThis.fetch = async (input: any, init?: RequestInit) => {
+    const requestUrl = typeof input === "string" ? input : input?.url;
+    const shouldAttachToken =
+      typeof requestUrl === "string" &&
+      requestUrl.startsWith(API_BASE_URL) &&
+      !!currentAuthToken;
+
+    if (!shouldAttachToken) {
+      return originalFetch(input, init);
+    }
+
+    const headers = new Headers(init?.headers || input?.headers || undefined);
+    if (!headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${currentAuthToken}`);
+    }
+
+    return originalFetch(input, {
+      ...init,
+      headers,
+    });
+  };
+
+  fetchPatched = true;
+}
 
 async function readStoredUser() {
   if (Platform.OS === "web") {
@@ -56,20 +97,59 @@ async function clearStoredUser() {
   await SecureStore.deleteItemAsync(STORAGE_KEY);
 }
 
+async function readStoredToken() {
+  if (Platform.OS === "web") {
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+  }
+
+  return SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+}
+
+async function writeStoredToken(value: string) {
+  if (Platform.OS === "web") {
+    localStorage.setItem(TOKEN_STORAGE_KEY, value);
+    return;
+  }
+
+  await SecureStore.setItemAsync(TOKEN_STORAGE_KEY, value);
+}
+
+async function clearStoredToken() {
+  if (Platform.OS === "web") {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    return;
+  }
+
+  await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    readStoredUser().then((stored) => {
-      if (stored) {
+    Promise.all([readStoredUser(), readStoredToken()]).then(([storedUser, storedToken]) => {
+      if (storedUser) {
         try {
-          setUser(JSON.parse(stored));
+          setUser(JSON.parse(storedUser));
         } catch {}
       }
+
+      if (storedToken) {
+        setToken(storedToken);
+        setCurrentAuthToken(storedToken);
+        patchFetchIfNeeded();
+      }
+
       setIsLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    setCurrentAuthToken(token);
+    patchFetchIfNeeded();
+  }, [token]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -84,6 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: `${statusMessage}` };
       }
       await writeStoredUser(JSON.stringify(data.user));
+      if (data?.token) {
+        await writeStoredToken(String(data.token));
+        setToken(String(data.token));
+      }
       setUser(data.user);
       return { user: data.user };
     } catch (error: any) {
@@ -112,12 +196,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await clearStoredUser();
+    await clearStoredToken();
     setUser(null);
+    setToken(null);
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isAuthenticated: !!user, login, signup, logout }}
+      value={{ user, token, isLoading, isAuthenticated: !!user && !!token, login, signup, logout }}
     >
       {children}
     </AuthContext.Provider>

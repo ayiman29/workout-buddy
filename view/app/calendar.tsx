@@ -49,6 +49,17 @@ export default function Calendar() {
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const formatDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatMonthKey = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  };
+
   useEffect(() => {
     fetchCalendar();
   }, [currentMonth]);
@@ -56,7 +67,7 @@ export default function Calendar() {
   const fetchCalendar = async () => {
     try {
       setLoading(true);
-      const monthStr = currentMonth.toISOString().slice(0, 7);
+      const monthStr = formatMonthKey(currentMonth);
       const res = await fetch(
         `${API_BASE_URL}/user/${userId}/calendar?month=${monthStr}`
       );
@@ -185,8 +196,7 @@ export default function Calendar() {
     }
 
     const hasItems = day.items && day.items.length > 0;
-    const dayDate = new Date(day.date);
-    const dayNum = dayDate.getDate();
+    const dayNum = Number(day.dateKey.slice(-2));
 
     return (
       <TouchableOpacity
@@ -251,7 +261,7 @@ export default function Calendar() {
       date <= end;
       date.setDate(date.getDate() + 1)
     ) {
-      const dateKey = date.toISOString().split("T")[0];
+      const dateKey = formatDateKey(date);
       calendarGrid.push(dayMap.get(dateKey) || null);
     }
   }
@@ -341,7 +351,7 @@ export default function Calendar() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {selectedDay
-                  ? new Date(selectedDay.date).toLocaleDateString("en-US", {
+                  ? new Date(`${selectedDay.dateKey}T00:00:00`).toLocaleDateString("en-US", {
                       weekday: "long",
                       month: "short",
                       day: "numeric",
