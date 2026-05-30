@@ -108,11 +108,15 @@ export default function SideDrawer({ visible, onClose }: Props) {
             </>
           ) : (
             <>
-              <TouchableOpacity onPress={() => { onClose(); router.push(`/habits?id=${userId}`); }}>
-                <Text style={styles.drawerItem}>Habits</Text>
+              <TouchableOpacity onPress={() => { onClose(); router.replace("/"); }}>
+                <Text style={styles.drawerItem}>Home</Text>
               </TouchableOpacity>
 
               <View style={styles.divider} />
+
+              <TouchableOpacity onPress={() => { onClose(); router.push(`/habits?id=${userId}`); }}>
+                <Text style={styles.drawerItem}>Habits</Text>
+              </TouchableOpacity>
 
               {isPaired && (
                 <>
